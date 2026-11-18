@@ -1,0 +1,48 @@
+name: 숲나들e 예약 일정 확인
+
+on:
+  schedule:
+    # 매일 08:00 (한국 시간). 30초 남짓 걸리고 공개 저장소라 비용이 없다.
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency: schedule-check
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 숲나들e 확인
+        id: check
+        run: node check.mjs
+        continue-on-error: true
+
+      - name: 기준 자료 저장
+        if: steps.check.outputs.unreliable != 'true'
+        run: |
+          git config user.name "schedule-check"
+          git config user.email "schedule-check@users.noreply.github.com"
+          git add snapshot.json
+          git diff --cached --quiet || git commit -m "일정 확인 $(date -u +%F)"
+          git push
+
+      - name: 변경 알림
+        if: steps.check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue create --title "숲나들e 일정 변경 발견 ($(date -u +%F))" --body-file report.md --label schedule-change
+
+      - name: 확인 실패 알림
+        if: steps.check.outputs.failed == 'true' || steps.check.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue create --title "숲나들e 일정 확인 실패 ($(date -u +%F))" --body-file report.md --label check-failed
