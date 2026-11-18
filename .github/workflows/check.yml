@@ -31,8 +31,10 @@ jobs:
         if: steps.check.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          # 저장소 주인에게 배정해야 '지켜보기'를 켜지 않아도 메일이 간다.
+          OWNER: ${{ github.repository_owner }}
         run: |
-          url=$(gh issue create --title "숲나들e 일정 변경 발견 ($(date -u +%F))" --body-file report.md --label schedule-change)
+          url=$(gh issue create --assignee "$OWNER" --title "숲나들e 일정 변경 발견 ($(date -u +%F))" --body-file report.md --label schedule-change)
           number=${url##*/}
           mkdir -p pending
           cp report.md "pending/$number.md"
@@ -51,4 +53,6 @@ jobs:
         if: steps.check.outputs.failed == 'true' || steps.check.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh issue create --title "숲나들e 일정 확인 실패 ($(date -u +%F))" --body-file report.md --label check-failed
+          # 저장소 주인에게 배정해야 '지켜보기'를 켜지 않아도 메일이 간다.
+          OWNER: ${{ github.repository_owner }}
+        run: gh issue create --assignee "$OWNER" --title "숲나들e 일정 확인 실패 ($(date -u +%F))" --body-file report.md --label check-failed

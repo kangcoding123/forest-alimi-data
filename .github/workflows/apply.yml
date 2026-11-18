@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      OWNER: ${{ github.repository_owner }}
       BRANCH: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
@@ -78,4 +79,4 @@ jobs:
         if: failure()
         run: |
           [ -f fail.md ] || echo "자동 수정을 반영하는 중 오류가 났습니다. Actions 기록을 확인하세요." > fail.md
-          gh issue create --title "자동 수정 반영 실패 ($(date -u +%F))" --body-file fail.md --label check-failed
+          gh issue create --assignee "$OWNER" --title "자동 수정 반영 실패 ($(date -u +%F))" --body-file fail.md --label check-failed
