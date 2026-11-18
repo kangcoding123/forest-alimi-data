@@ -26,20 +26,26 @@ jobs:
         run: node check.mjs
         continue-on-error: true
 
+      # 바뀐 곳이 있으면 이슈를 만들고, 자동 수정이 읽을 수 있게 같은 내용을 pending/<이슈 번호>.md로 남긴다.
+      - name: 변경 알림
+        if: steps.check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          url=$(gh issue create --title "숲나들e 일정 변경 발견 ($(date -u +%F))" --body-file report.md --label schedule-change)
+          number=${url##*/}
+          mkdir -p pending
+          cp report.md "pending/$number.md"
+
       - name: 기준 자료 저장
         if: steps.check.outputs.unreliable != 'true'
         run: |
           git config user.name "schedule-check"
           git config user.email "schedule-check@users.noreply.github.com"
           git add snapshot.json
+          [ -d pending ] && git add pending
           git diff --cached --quiet || git commit -m "일정 확인 $(date -u +%F)"
           git push
-
-      - name: 변경 알림
-        if: steps.check.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh issue create --title "숲나들e 일정 변경 발견 ($(date -u +%F))" --body-file report.md --label schedule-change
 
       - name: 확인 실패 알림
         if: steps.check.outputs.failed == 'true' || steps.check.outcome == 'failure'

@@ -1,0 +1,81 @@
+name: 자동 수정 검사 후 반영
+
+# 자동 수정(Claude 루틴)은 claude/ 로 시작하는 가지에만 올린다.
+# 여기서 일정표를 검사해 통과한 것만 main에 합치고, 결과를 이슈에 남긴다.
+on:
+  push:
+    branches: ['claude/**']
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency: schedule-apply
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRANCH: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 바뀐 파일 확인
+        run: |
+          git fetch origin main
+          files=$(git diff --name-only origin/main...HEAD)
+          echo "$files"
+          bad=$(echo "$files" | grep -Ev '^(forests\.json|pending/[0-9]+\.md|held/[0-9]+\.md|results/[0-9]+\.md)$' || true)
+          if [ -n "$bad" ]; then
+            echo "자동 수정이 건드릴 수 없는 파일이 바뀌었습니다:" > fail.md
+            echo "$bad" | sed 's/^/- /' >> fail.md
+            exit 1
+          fi
+
+      - name: 일정표 검사
+        run: |
+          git show origin/main:forests.json > "$RUNNER_TEMP/base.json"
+          if ! node validate.mjs "$RUNNER_TEMP/base.json" > validate.log 2>&1; then
+            { echo "일정표 검사를 통과하지 못해 반영하지 않았습니다."; echo; echo '```'; cat validate.log; echo '```'; } > fail.md
+            cat validate.log
+            exit 1
+          fi
+          cat validate.log
+
+      - name: main에 합치기
+        run: |
+          git config user.name "schedule-apply"
+          git config user.email "schedule-apply@users.noreply.github.com"
+          before=$(git rev-parse origin/main)
+          git checkout -B main origin/main
+          git merge --no-edit "origin/$BRANCH"
+          git push origin main
+          echo "BEFORE=$before" >> "$GITHUB_ENV"
+
+      - name: 결과를 이슈에 남기기
+        run: |
+          for file in $(git diff --name-only --diff-filter=AM "$BEFORE" HEAD -- results/); do
+            number=$(basename "$file" .md)
+            gh issue comment "$number" --body-file "$file"
+            if head -1 "$file" | grep -q '반영'; then
+              gh issue close "$number"
+            else
+              gh issue edit "$number" --add-label needs-review
+            fi
+          done
+
+      - name: 가지 지우기
+        if: always()
+        run: git push origin --delete "$BRANCH" || true
+
+      - name: 실패 알림
+        if: failure()
+        run: |
+          [ -f fail.md ] || echo "자동 수정을 반영하는 중 오류가 났습니다. Actions 기록을 확인하세요." > fail.md
+          gh issue create --title "자동 수정 반영 실패 ($(date -u +%F))" --body-file fail.md --label check-failed
