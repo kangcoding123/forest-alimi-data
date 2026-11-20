@@ -59,15 +59,22 @@ jobs:
           git push origin main
           echo "BEFORE=$before" >> "$GITHUB_ENV"
 
+      # 결과 메일은 제목만 봐도 알 수 있게 이슈 제목을 먼저 바꾼다.
+      # (Gmail은 제목이 달라지면 새 대화로 보여 주므로, '발견' 메일에 묻히지 않는다.)
       - name: 결과를 이슈에 남기기
         run: |
           for file in $(git diff --name-only --diff-filter=AM "$BEFORE" HEAD -- results/); do
             number=$(basename "$file" .md)
-            gh issue comment "$number" --body-file "$file"
+            base=$(gh issue view "$number" --json title -q .title | sed -E 's/^\[[^]]*\] //; s/ — .*$//')
             if head -1 "$file" | grep -q '반영'; then
+              gh issue edit "$number" --title "[완료] $base — 하실 일 없음"
+              { echo "## 처리를 마쳤습니다. 하실 일이 없습니다."; echo; echo "일정표를 고친 경우, 사용자 앱에는 다음에 앱을 열 때 적용됩니다."; echo; tail -n +2 "$file"; } > comment.md
+              gh issue comment "$number" --body-file comment.md
               gh issue close "$number"
             else
-              gh issue edit "$number" --add-label needs-review
+              gh issue edit "$number" --title "[보류] $base — 확인 필요" --add-label needs-review
+              { echo "## 보류했습니다. 확인이 필요합니다."; echo; echo "자동으로 고치기에는 애매해서 앱의 일정표는 그대로 뒀습니다."; echo; echo "**하실 일:** Claude에게 \"이슈 ${number}번 봐줘\"라고 말씀해 주세요."; echo; tail -n +2 "$file"; } > comment.md
+              gh issue comment "$number" --body-file comment.md
             fi
           done
 
@@ -79,4 +86,4 @@ jobs:
         if: failure()
         run: |
           [ -f fail.md ] || echo "자동 수정을 반영하는 중 오류가 났습니다. Actions 기록을 확인하세요." > fail.md
-          gh issue create --assignee "$OWNER" --title "자동 수정 반영 실패 ($(TZ=Asia/Seoul date +%F))" --body-file fail.md --label check-failed
+          gh issue create --assignee "$OWNER" --title "[확인 필요] 자동 수정을 반영하지 못함 ($(TZ=Asia/Seoul date +%F))" --body-file fail.md --label check-failed
