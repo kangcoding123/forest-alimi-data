@@ -2,7 +2,7 @@ name: 숲나들e 예약 일정 확인
 
 on:
   schedule:
-    # 매일 08:00 (한국 시간). 30초 남짓 걸리고 공개 저장소라 비용이 없다.
+    # 매일 08:00 (한국 시간). 1분 남짓 걸리고 공개 저장소라 비용이 없다.
     - cron: '0 23 * * *'
   workflow_dispatch:
 
@@ -34,20 +34,43 @@ jobs:
           # 저장소 주인에게 배정해야 '지켜보기'를 켜지 않아도 메일이 간다.
           OWNER: ${{ github.repository_owner }}
         run: |
-          url=$(gh issue create --assignee "$OWNER" --title "숲나들e 일정 변경 발견 ($(date -u +%F))" --body-file report.md --label schedule-change)
+          url=$(gh issue create --assignee "$OWNER" --title "숲나들e 일정 변경 발견 ($(TZ=Asia/Seoul date +%F))" --body-file report.md --label schedule-change)
           number=${url##*/}
           mkdir -p pending
           cp report.md "pending/$number.md"
 
+      # 실제 예약 달력과 일정표의 예측을 대조한다. 안내문은 그대로인데 운영만 바뀐 경우를 잡는다.
+      - name: 예약 달력 대조
+        id: calendar
+        run: node calendar.mjs
+        continue-on-error: true
+
+      # 믿기 어려운 실행에서는 프로그램이 파일을 고치지 않으므로, 바뀐 것만 올리면 된다.
       - name: 기준 자료 저장
-        if: steps.check.outputs.unreliable != 'true'
         run: |
           git config user.name "schedule-check"
           git config user.email "schedule-check@users.noreply.github.com"
-          git add snapshot.json
-          [ -d pending ] && git add pending
-          git diff --cached --quiet || git commit -m "일정 확인 $(date -u +%F)"
+          for f in snapshot.json calendar.json pending; do [ -e "$f" ] && git add "$f"; done
+          git diff --cached --quiet || git commit -m "일정 확인 $(TZ=Asia/Seoul date +%F)"
+          git pull -q --rebase
           git push
+
+      # 달력 어긋남은 자동 수정 대상이 아니다(pending 파일을 만들지 않는다). 사람이 원인을 확인한다.
+      - name: 달력 어긋남 알림
+        if: steps.calendar.outputs.calendar_changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+        run: gh issue create --assignee "$OWNER" --title "예약 달력과 일정표가 어긋남 ($(TZ=Asia/Seoul date +%F))" --body-file calendar-report.md --label calendar-mismatch
+
+      - name: 달력 확인 실패 알림
+        if: steps.calendar.outputs.calendar_unreliable == 'true' || steps.calendar.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          [ -f calendar-report.md ] || echo "예약 달력 대조 프로그램이 결과를 남기지 못하고 끝났습니다. Actions 기록을 확인하세요." > calendar-report.md
+          gh issue create --assignee "$OWNER" --title "예약 달력 확인 실패 ($(TZ=Asia/Seoul date +%F))" --body-file calendar-report.md --label check-failed
 
       - name: 확인 실패 알림
         if: steps.check.outputs.failed == 'true' || steps.check.outcome == 'failure'
@@ -55,4 +78,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           # 저장소 주인에게 배정해야 '지켜보기'를 켜지 않아도 메일이 간다.
           OWNER: ${{ github.repository_owner }}
-        run: gh issue create --assignee "$OWNER" --title "숲나들e 일정 확인 실패 ($(date -u +%F))" --body-file report.md --label check-failed
+        run: gh issue create --assignee "$OWNER" --title "숲나들e 일정 확인 실패 ($(TZ=Asia/Seoul date +%F))" --body-file report.md --label check-failed
