@@ -61,15 +61,15 @@ jobs:
 
       # 결과 메일은 제목만 봐도 알 수 있게 이슈 제목을 먼저 바꾼다.
       # (Gmail은 제목이 달라지면 새 대화로 보여 주므로, '발견' 메일에 묻히지 않는다.)
-      # 이슈를 닫으면 GitHub가 영어 자동 메일("Closed #N")을 보내는데, 제목을 바꾸기 전에 닫아
-      # 그 메일이 '발견' 대화에 붙고, 결과 대화에는 한글 결과 한 통만 남게 한다.
+      # 처리가 끝나도 이슈를 닫지 않는다. 닫으면 GitHub가 영어 자동 메일("Closed #N as completed")을
+      # 결과 메일과 같은 대화로 보내 받는 사람을 헷갈리게 한다. 끝난 이슈는 제목의 [완료]로 구분한다.
+      # (저장소 주인이 직접 닫으면 본인에게는 메일이 가지 않는다.)
       - name: 결과를 이슈에 남기기
         run: |
           for file in $(git diff --name-only --diff-filter=AM "$BEFORE" HEAD -- results/); do
             number=$(basename "$file" .md)
             base=$(gh issue view "$number" --json title -q .title | sed -E 's/^\[[^]]*\] //; s/ — .*$//')
             if head -1 "$file" | grep -q '반영'; then
-              gh issue close "$number"
               gh issue edit "$number" --title "[완료] $base — 하실 일 없음"
               { echo "## 처리를 마쳤습니다. 하실 일이 없습니다."; echo; echo "일정표를 고친 경우, 사용자 앱에는 다음에 앱을 열 때 적용됩니다."; echo; tail -n +2 "$file"; } > comment.md
               gh issue comment "$number" --body-file comment.md
