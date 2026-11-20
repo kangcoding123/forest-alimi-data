@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-19T03",
+  "updated": "2026-11-20",
   "shared": {
     "national": {
       "rules": [
@@ -74,7 +74,7 @@
   },
   "forests": [
     {"name":"유명산","type":"national","sido":"경기","sigungu":"가평군","use":"national"},
-    {"name":"아세안","type":"national","sido":"경기","sigungu":"양주시","rules":[{"kind":"weekly","weekday":3,"hour":9,"minute":0,"target":"5주 뒤 수요일부터 1주일(수~화) 숙박분","label":"선착순 예약 오픈","method":"first-come"}],"note":"주말 추첨 대상이 아닙니다. 아세안 회원국 국민 우선예약은 매월 4일 09:00~14일 18:00입니다."},
+    {"name":"아세안","type":"national","sido":"경기","sigungu":"양주시","rules":[{"kind":"weekly","weekday":3,"hour":9,"minute":0,"target":"5주 뒤 수요일부터 1주일(수~화) 숙박분","label":"선착순 예약 오픈","method":"first-come"},{"kind":"monthly","day":4,"hour":9,"minute":0,"endDay":8,"endHour":18,"endMinute":0,"label":"우선예약 추첨 신청 시작","method":"lottery","audience":["disabled","senior","multichild"],"note":"발표 13일 10:00","target":"장애인·65세 이상·다자녀 대상 · 다음 달 숙박분 전체"},{"kind":"monthly","day":4,"hour":9,"minute":0,"endDay":14,"endHour":18,"endMinute":0,"label":"우선예약 시작","method":"first-come","audience":["voucher"],"target":"산림복지바우처 대상 · 다음 달 숙박분"}],"note":"주말 추첨 대상이 아닙니다. 장애인·실버·다자녀 우선예약 추첨은 매월 4일 09:00~8일 18:00, 산림복지바우처와 아세안 회원국 국민 우선예약은 매월 4일 09:00~14일 18:00입니다."},
     {"name":"산음","type":"national","sido":"경기","sigungu":"양평군","use":"national"},
     {"name":"중미산","type":"national","sido":"경기","sigungu":"양평군","use":"national"},
     {"name":"운악산","type":"national","sido":"경기","sigungu":"포천시","use":"national"},
