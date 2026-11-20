@@ -62,6 +62,8 @@ node calendar.mjs --dry  # 대조만
 {"kind":"weekly","weekday":3,"hour":9,"minute":0,"label":"선착순 예약 오픈","method":"first-come","target":"6주차 화요일 숙박분까지"}
 // 매월: endDay/endHour/endMinute는 신청 마감(추첨 등). day가 그 달에 없으면 말일.
 {"kind":"monthly","day":4,"hour":9,"minute":0,"endDay":9,"endHour":18,"endMinute":0,"label":"주말 추첨 신청 시작","method":"lottery","target":"다음 달 주말 숙박분"}
+// 한 번만: 해마다 날짜가 따로 공지되는 일정(여름 성수기 추첨 등). endDate/endHour/endMinute는 신청 마감.
+{"kind":"once","date":"2027-06-08","hour":9,"minute":0,"endDate":"2027-06-15","endHour":18,"endMinute":0,"label":"성수기 추첨 신청 시작","method":"lottery","target":"7월 15일~8월 24일 숙박분"}
 // 우선예약: audience에 해당하는 사용자에게만 보인다.
 // "resident:경기 가평군"(주민), "disabled", "senior", "multichild", "voucher"
 ```

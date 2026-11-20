@@ -110,7 +110,8 @@ function predictLast(rule, asOf) {
  * 우선예약 잔여 객실 오픈은 일부 객실만 열므로 뺀다. 다만 월 추첨제 휴양림은 추첨 뒤 잔여분 오픈이 곧 일반 오픈이다.
  */
 function mainRules(forest, shared) {
-  const all = [...(forest.use ? shared[forest.use].rules : []), ...(forest.rules ?? [])].filter((r) => !r.audience);
+  // 한 번만 열리는 일정(once)은 '지금 열려 있어야 하는 범위'를 정하는 정기 규칙이 아니므로 뺀다.
+  const all = [...(forest.use ? shared[forest.use].rules : []), ...(forest.rules ?? [])].filter((r) => !r.audience && r.kind !== 'once');
   const general = all.filter((r) => r.method === 'first-come');
   const lotteryForest = all.some((r) => r.method === 'lottery' && r.kind === 'monthly') && !general.some((r) => r.kind === 'weekly');
   return general.filter((r) => lotteryForest || !/잔여/.test(r.label));

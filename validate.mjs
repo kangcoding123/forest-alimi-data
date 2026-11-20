@@ -17,9 +17,15 @@ const isObj = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isStr = (v) => typeof v === 'string' && v.length > 0;
 const isInt = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
 const optInt = (v, min, max) => v === undefined || isInt(v, min, max);
+const isDate = (v) => {
+  const m = typeof v === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  if (!m) return false;
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3];
+};
 const AUDIENCE = /^(disabled|senior|multichild|voucher|resident:\S.*)$/;
 const RULE_KEYS = new Set([
-  'kind', 'weekday', 'day', 'hour', 'minute', 'endDay', 'endHour', 'endMinute', 'label', 'target', 'method', 'note', 'audience',
+  'kind', 'weekday', 'day', 'date', 'hour', 'minute', 'endDay', 'endDate', 'endHour', 'endMinute', 'label', 'target', 'method', 'note', 'audience',
 ]);
 const FOREST_KEYS = new Set(['name', 'type', 'sido', 'sigungu', 'operator', 'hmpgId', 'use', 'rules', 'note', 'verified']);
 
@@ -40,6 +46,12 @@ function checkRule(r, where) {
     if (!isInt(r.day, 1, 31)) bad('day 범위 오류');
     if (!optInt(r.endDay, 1, 31) || !optInt(r.endHour, 0, 23) || !optInt(r.endMinute, 0, 59)) bad('마감 일시 범위 오류');
     if (r.endDay === undefined && (r.endHour !== undefined || r.endMinute !== undefined)) bad('endDay 없이 마감 시각만 있음');
+  } else if (r.kind === 'once') {
+    // 한 번만 열리는 일정 (예: 해마다 날짜가 따로 공지되는 여름 성수기 추첨)
+    if (!isDate(r.date)) bad(`date 형식 오류: ${r.date}`);
+    if (r.endDate !== undefined && !(isDate(r.endDate) && r.endDate >= r.date)) bad(`endDate 오류: ${r.endDate}`);
+    if (!optInt(r.endHour, 0, 23) || !optInt(r.endMinute, 0, 59)) bad('마감 시각 범위 오류');
+    if (r.endDate === undefined && (r.endHour !== undefined || r.endMinute !== undefined)) bad('endDate 없이 마감 시각만 있음');
   } else bad(`kind '${r.kind}'`);
 }
 
