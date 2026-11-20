@@ -31,7 +31,7 @@ jobs:
         if: steps.check.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          # 저장소 주인에게 배정해야 '지켜보기'를 켜지 않아도 메일이 간다.
+          # 본문에서 저장소 주인을 불러야(@) '지켜보기'를 켜지 않아도 메일이 간다.
           OWNER: ${{ github.repository_owner }}
         run: |
           {
@@ -42,8 +42,10 @@ jobs:
             echo "---"
             echo
             cat report.md
+            echo
+            echo "받는 사람: @$OWNER"
           } > issue.md
-          url=$(gh issue create --assignee "$OWNER" --title "[발견] 숲나들e 안내문 변경 ($(TZ=Asia/Seoul date +%F)) — 처리 대기 중" --body-file issue.md --label schedule-change)
+          url=$(gh issue create --title "[발견] 숲나들e 안내문 변경 ($(TZ=Asia/Seoul date +%F)) — 처리 대기 중" --body-file issue.md --label schedule-change)
           number=${url##*/}
           mkdir -p pending
           cp report.md "pending/$number.md"
@@ -79,8 +81,10 @@ jobs:
             echo "---"
             echo
             cat calendar-report.md
+            echo
+            echo "받는 사람: @$OWNER"
           } > issue.md
-          gh issue create --assignee "$OWNER" --title "[확인 필요] 예약 달력과 앱 일정이 다름 ($(TZ=Asia/Seoul date +%F))" --body-file issue.md --label calendar-mismatch
+          gh issue create --title "[확인 필요] 예약 달력과 앱 일정이 다름 ($(TZ=Asia/Seoul date +%F))" --body-file issue.md --label calendar-mismatch
 
       - name: 달력 확인 실패 알림
         if: steps.calendar.outputs.calendar_unreliable == 'true' || steps.calendar.outcome == 'failure'
@@ -89,12 +93,15 @@ jobs:
           OWNER: ${{ github.repository_owner }}
         run: |
           [ -f calendar-report.md ] || echo "예약 달력 대조 프로그램이 결과를 남기지 못하고 끝났습니다. Actions 기록을 확인하세요." > calendar-report.md
-          gh issue create --assignee "$OWNER" --title "[확인 필요] 예약 달력을 읽지 못함 ($(TZ=Asia/Seoul date +%F))" --body-file calendar-report.md --label check-failed
+          { echo "숲나들e 예약 달력을 읽지 못했습니다. Claude에게 이 이슈 번호를 알려 주세요."; echo; echo "---"; echo; cat calendar-report.md; echo; echo "받는 사람: @$OWNER"; } > issue.md
+          gh issue create --title "[확인 필요] 예약 달력을 읽지 못함 ($(TZ=Asia/Seoul date +%F))" --body-file issue.md --label check-failed
 
       - name: 확인 실패 알림
         if: steps.check.outputs.failed == 'true' || steps.check.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
-          # 저장소 주인에게 배정해야 '지켜보기'를 켜지 않아도 메일이 간다.
+          # 본문에서 저장소 주인을 불러야(@) '지켜보기'를 켜지 않아도 메일이 간다.
           OWNER: ${{ github.repository_owner }}
-        run: gh issue create --assignee "$OWNER" --title "[확인 필요] 숲나들e 안내문을 읽지 못함 ($(TZ=Asia/Seoul date +%F))" --body-file report.md --label check-failed
+        run: |
+          { echo "숲나들e 안내문을 읽지 못했습니다. Claude에게 이 이슈 번호를 알려 주세요."; echo; echo "---"; echo; cat report.md; echo; echo "받는 사람: @$OWNER"; } > issue.md
+          gh issue create --title "[확인 필요] 숲나들e 안내문을 읽지 못함 ($(TZ=Asia/Seoul date +%F))" --body-file issue.md --label check-failed
