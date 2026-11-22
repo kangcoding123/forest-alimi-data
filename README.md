@@ -19,7 +19,7 @@ node check.mjs        # 비교 후 report.md 작성, snapshot.json 갱신
 node check.mjs --dry  # 비교만
 ```
 
-GitHub Actions가 매일 08:00(한국 시간)에 실행한다. 바뀐 곳이 있으면 `schedule-change` 라벨의 이슈가, 읽기에 실패하면 `check-failed` 라벨의 이슈가 만들어진다.
+GitHub Actions가 매일 아침(한국 시간 07:23 예약, GitHub 사정으로 정오 무렵까지 밀릴 수 있음)에 실행한다. 자동 수정(Claude 루틴)은 그 뒤인 14:00에 돈다. 바뀐 곳이 있으면 `schedule-change` 라벨의 이슈가, 읽기에 실패하면 `check-failed` 라벨의 이슈가 만들어진다.
 
 이슈는 저장소 주인에게 메일로 간다. 제목 앞머리만 봐도 무엇인지 알 수 있게 한다.
 
